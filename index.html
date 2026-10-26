@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestion Soldes & Commissions</title>
+<style>
+:root{color-scheme:light;--blue:#1459a6;--bg:#f3f6fa;--ink:#172334;--line:#dbe3ed;--green:#168454;--red:#b83b43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Arial,sans-serif}
+header{background:linear-gradient(120deg,#103c75,#1873c6);color:white;padding:22px max(18px,calc((100% - 1200px)/2))}
+header h1{margin:0 0 5px;font-size:25px}header p{margin:0;opacity:.9}
+main{max-width:1200px;margin:22px auto;padding:0 16px 40px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.tab{border:1px solid var(--line);background:white;color:var(--ink);padding:10px 15px;border-radius:9px;cursor:pointer;font-weight:700}.tab.active{background:var(--blue);color:white;border-color:var(--blue)}
+.panel{display:none}.panel.active{display:block}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px;margin-bottom:18px}
+.card,.section{background:white;border:1px solid var(--line);border-radius:13px;padding:17px;box-shadow:0 2px 8px #20304008}.card .label{color:#66758a;font-size:13px}.card .value{font-size:25px;font-weight:800;margin-top:7px;overflow-wrap:anywhere}.section{margin-bottom:16px}.section h2{font-size:18px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:13px;font-weight:700;color:#435166}input,select,textarea{font:inherit;border:1px solid #cbd5e1;border-radius:7px;padding:10px;width:100%;background:white;color:var(--ink)}input:focus,select:focus,textarea:focus{outline:2px solid #b8d8ff;border-color:var(--blue)}
+button,.filebtn{font:inherit;font-weight:700;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:var(--blue);color:white}.secondary{background:#e8eef6;color:#20324b}.danger{background:#b83b43}.success{background:var(--green)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.hint{font-size:13px;color:#64748b}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:850px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;color:#596a80;background:#f8fafc}td .smallbtn{padding:6px 9px;font-size:12px;margin-right:4px}.empty{text-align:center;padding:26px;color:#718096}.pill{display:inline-block;border-radius:99px;background:#e6f5ed;color:#176b44;padding:3px 8px;font-size:12px}.message{display:none;padding:10px 12px;border-radius:8px;margin:10px 0}.message.show{display:block;background:#e8f6ee;color:#176b44}.message.error{background:#fff0f0;color:#9f2630}.money{font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:15px}@media(max-width:700px){.two{grid-template-columns:1fr}header h1{font-size:21px}}
+footer{text-align:center;color:#728096;font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+<header><h1>Gestion des soldes & commissions</h1><p>Application hors ligne • Togo • Sauvegarde locale automatique</p></header>
+<main>
+<nav>
+<button class="tab active" data-tab="dashboard">Tableau de bord</button>
+<button class="tab" data-tab="saisie">Saisie quotidienne</button>
+<button class="tab" data-tab="historique">Historique</button>
+<button class="tab" data-tab="sauvegarde">Sauvegarde</button>
+<button class="tab" data-tab="guide">Guide d'utilisation</button>
+</nav>
+<div id="msg" class="message"></div>
+<section id="dashboard" class="panel active">
+<div class="cards">
+<div class="card"><div class="label">Soldes opérateurs en fin de journée</div><div class="value money" id="totalFin">0 F</div></div>
+<div class="card"><div class="label">Espèces restantes (dernier jour)</div><div class="value money" id="cashFinTotal">0 F</div></div>
+<div class="card"><div class="label">Total inventaire (opérateurs + espèces)</div><div class="value money" id="totalInventaire">0 F</div></div>
+<div class="card"><div class="label">Commissions du jour</div><div class="value money" id="commJour">0 F</div></div>
+<div class="card"><div class="label">Commissions du mois</div><div class="value money" id="commMois">0 F</div></div>
+<div class="card"><div class="label">Commissions cumulées</div><div class="value money" id="commTotal">0 F</div></div>
+<div class="card"><div class="label">Fonds de base</div><div class="value money" id="fondsBaseTotal">0 F</div></div>
+<div class="card"><div class="label">Fonds de base + commissions cumulées</div><div class="value money" id="totalActivite">0 F</div></div>
+</div>
+<div class="section"><h2>Définir le fonds de base</h2><p class="hint">Entrez le montant initial que vous avez investi dans l’activité. Le total estimé affiché additionne ce fonds aux commissions enregistrées.</p><div class="grid"><div class="field"><label for="fondsBaseInput">Fonds de base initial (F CFA)</label><input type="number" min="0" step="1" id="fondsBaseInput" value="0"></div></div><div class="actions"><button id="saveFondsBase">Enregistrer le fonds de base</button></div><p class="hint">Important : si les commissions sont déjà incluses dans vos soldes ou retirées de l’activité, le total fonds + commissions est une estimation comptable et peut ne pas correspondre à l’argent disponible en caisse.</p></div>
+<div class="section"><h2>Dernière situation enregistrée</h2><div id="lastSummary" class="hint">Aucune saisie pour le moment.</div></div>
+<div class="section"><h2>Commissions par service — mois en cours</h2><div class="tablewrap"><table><thead><tr><th>Service</th><th>Solde de début (dernier jour)</th><th>Solde de fin (dernier jour)</th><th>Commission du mois</th></tr></thead><tbody id="dashboardServices"></tbody></table></div></div>
+</section>
+<section id="saisie" class="panel">
+<div class="section"><h2 id="formTitle">Saisie quotidienne</h2><p class="hint">Saisissez les soldes de début et de fin de journée. Les commissions sont saisies manuellement pour chaque service.</p>
+<form id="entryForm">
+<div class="grid"><div class="field"><label for="date">Date</label><input type="date" id="date" required></div><div class="field"><label for="cashRestant">Espèces restantes en caisse (F CFA)</label><input type="number" min="0" step="1" id="cashRestant" value="0" required><small class="hint">Saisissez l’argent liquide réellement présent en caisse à la fin de la journée.</small></div></div>
+<div class="two" style="margin-top:15px">
+<div class="section"><h2>Flooz</h2><div class="grid">
+<div class="field"><label>Solde de début (F CFA)</label><input type="number" min="0" step="1" id="floozDebut" value="0" required></div>
+<div class="field"><label>Solde de fin (F CFA)</label><input type="number" min="0" step="1" id="floozFin" value="0" required></div>
+<div class="field"><label>Commission du jour (F CFA)</label><input type="number" min="0" step="1" id="floozComm" value="0" required></div></div></div>
+<div class="section"><h2>TMoney</h2><div class="grid">
+<div class="field"><label>Solde de début (F CFA)</label><input type="number" min="0" step="1" id="tmoneyDebut" value="0" required></div>
+<div class="field"><label>Solde de fin (F CFA)</label><input type="number" min="0" step="1" id="tmoneyFin" value="0" required></div>
+<div class="field"><label>Commission du jour (F CFA)</label><input type="number" min="0" step="1" id="tmoneyComm" value="0" required></div></div></div>
+<div class="section"><h2>Transfert Moov</h2><div class="grid">
+<div class="field"><label>Solde de début (F CFA)</label><input type="number" min="0" step="1" id="moovDebut" value="0" required></div>
+<div class="field"><label>Solde de fin (F CFA)</label><input type="number" min="0" step="1" id="moovFin" value="0" required></div>
+<div class="field"><label>Commission du jour (F CFA)</label><input type="number" min="0" step="1" id="moovComm" value="0" required></div></div></div>
+<div class="section"><h2>Transfert Togocel</h2><div class="grid">
+<div class="field"><label>Solde de début (F CFA)</label><input type="number" min="0" step="1" id="togocelDebut" value="0" required></div>
+<div class="field"><label>Solde de fin (F CFA)</label><input type="number" min="0" step="1" id="togocelFin" value="0" required></div>
+<div class="field"><label>Commission du jour (F CFA)</label><input type="number" min="0" step="1" id="togocelComm" value="0" required></div></div></div>
+</div>
+<div class="field" style="margin-top:10px"><label for="notes">Observations (facultatif)</label><textarea id="notes" rows="2" placeholder="Remarque sur la journée..."></textarea></div>
+<div class="actions"><button type="submit" id="saveBtn">Enregistrer la journée</button><button type="button" class="secondary" id="resetBtn">Vider le formulaire</button><button type="button" class="secondary" id="cancelEdit" style="display:none">Annuler la modification</button></div>
+</form></div>
+</section>
+<section id="historique" class="panel">
+<div class="section"><h2>Historique des saisies</h2><div class="grid">
+<div class="field"><label>Du</label><input type="date" id="fromDate"></div><div class="field"><label>Au</label><input type="date" id="toDate"></div>
+<div class="field"><label>Rechercher une date précise</label><input type="date" id="searchDate"></div>
+</div><div class="actions"><button id="searchBtn">Rechercher</button><button class="secondary" id="clearSearch">Effacer les filtres</button></div></div>
+<div class="section"><div class="tablewrap"><table><thead><tr><th>Date</th><th>Flooz début / fin</th><th>Flooz comm.</th><th>TMoney début / fin</th><th>TMoney comm.</th><th>Moov début / fin</th><th>Moov comm.</th><th>Togocel début / fin</th><th>Togocel comm.</th><th>Espèces restantes</th><th>Total commissions</th><th>Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div><div id="historyEmpty" class="empty">Aucune saisie enregistrée.</div></div>
+</section>
+<section id="sauvegarde" class="panel">
+<div class="section"><h2>Sauvegarder les données</h2><p>Exportez un fichier JSON contenant toutes vos saisies. Conservez-le sur une clé USB ou un autre emplacement sûr.</p><div class="actions"><button id="exportBtn">Exporter la sauvegarde</button><button id="csvBtn" class="secondary">Exporter l'historique en CSV</button></div></div>
+<div class="section"><h2>Importer une sauvegarde</h2><p class="hint">L'importation remplace les données actuellement enregistrées sur cet appareil. Faites d'abord une sauvegarde si vous voulez les conserver.</p><div class="field"><label for="importFile">Choisir un fichier de sauvegarde JSON</label><input type="file" id="importFile" accept=".json,application/json"></div><div class="actions"><button id="importBtn">Importer la sauvegarde</button></div></div>
+<div class="section"><h2>Effacer toutes les données</h2><p class="hint">Cette action est définitive sur cet appareil. Exportez une sauvegarde avant de continuer.</p><button class="danger" id="deleteAllBtn">Effacer toutes les données</button></div>
+</section>
+<section id="guide" class="panel">
+<div class="section"><h2>Guide d'utilisation</h2>
+<ol>
+<li><b>Ouvrir l'application :</b> gardez le fichier HTML sur votre ordinateur et ouvrez-le avec Chrome, Firefox ou Edge. Internet n'est pas nécessaire.</li>
+<li><b>Saisir une journée :</b> ouvrez « Saisie quotidienne », choisissez la date, entrez les soldes de début et de fin et la commission de chaque service, puis indiquez les espèces réellement restantes en caisse à la fin de la journée.</li>
+<li><b>Mode manuel :</b> les commissions ne sont pas calculées avec les taux de 0,5 %. Entrez le montant communiqué par l'opérateur ou calculé dans votre relevé. Les totaux sont additionnés automatiquement.</li>
+<li><b>Enregistrer :</b> cliquez sur « Enregistrer la journée ». Les données sont enregistrées localement dans le navigateur. Une deuxième saisie pour la même date remplace la première après confirmation.</li>
+<li><b>Consulter / modifier :</b> dans « Historique », filtrez par date ou période. Cliquez sur « Modifier » pour charger une journée dans le formulaire, ou « Supprimer » pour retirer cette journée.</li>
+<li><b>Faire l’inventaire :</b> le tableau de bord additionne les soldes de fin des quatre opérateurs et les espèces restantes saisies pour la dernière journée enregistrée. Vérifiez que les espèces ne sont pas déjà comptées dans les soldes des opérateurs.</li>
+<li><b>Comprendre les commissions :</b> « du jour » correspond à la date du jour ; « du mois » additionne les commissions du mois en cours ; « cumulées » additionne toutes les saisies conservées.</li>
+<li><b>Fonds de base :</b> dans le tableau de bord, entrez votre capital initial et enregistrez-le. « Fonds de base + commissions cumulées » est une estimation, pas nécessairement l’argent disponible si les commissions sont déjà comprises dans les soldes.</li><li><b>Sauvegarder :</b> dans « Sauvegarde », exportez le fichier JSON régulièrement. Pour transférer les données sur un autre appareil, copiez ce fichier puis importez-le depuis l'autre appareil.</li>
+<li><b>CSV :</b> l'export CSV peut être ouvert dans Excel pour analyser l'historique.</li>
+</ol>
+<h3>Conseils importants</h3><ul><li>Vérifiez les montants avant l'enregistrement.</li><li>Une sauvegarde locale n'est pas une synchronisation en ligne : chaque appareil possède ses propres données.</li><li>Ne supprimez pas le fichier HTML si vous n'avez pas une copie. Le stockage du navigateur peut être effacé par les réglages de l'appareil.</li><li>Pour utiliser plusieurs appareils, exportez et importez les données manuellement. Évitez les saisies concurrentes puis l'importation de sauvegardes différentes, car cela peut écraser des données.</li></ul>
+</div></section>
+<footer>Gestion Soldes & Commissions • Fonctionnement hors ligne • Montants en FCFA</footer>
+</main>
+<script>
+const SERVICES=[['flooz','Flooz'],['tmoney','TMoney'],['moov','Transfert Moov'],['togocel','Transfert Togocel']];
+const KEY='gestion_soldes_commissions_togo_v1';
+let records=[], editingDate=null, fondsBase=0;
+const $=id=>document.getElementById(id);
+const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const fmt=n=>Number(n||0).toLocaleString('fr-FR',{maximumFractionDigits:0})+' F';
+const totalComm=r=>SERVICES.reduce((s,[k])=>s+Number(r[k+'Comm']||0),0);
+function notify(msg,error=false){let m=$('msg');m.textContent=msg;m.className='message show'+(error?' error':'');setTimeout(()=>m.className='message',4500)}
+function load(){try{let x=localStorage.getItem(KEY);records=x?JSON.parse(x):[];if(!Array.isArray(records))records=[]}catch(e){records=[];notify("Impossible de lire le stockage local de ce navigateur.",true)}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(records));render();}catch(e){notify("Sauvegarde locale impossible. Exportez vos données et libérez de l'espace.",true)}}
+const FONDS_KEY='gestion_soldes_commissions_togo_fonds_base_v1';
+function loadFondsBase(){try{fondsBase=Math.max(0,Number(localStorage.getItem(FONDS_KEY)||0));$('fondsBaseInput').value=fondsBase;}catch(e){fondsBase=0;$('fondsBaseInput').value=0;}}
+$('saveFondsBase').addEventListener('click',()=>{let value=Number($('fondsBaseInput').value);if(!Number.isFinite(value)||value<0){notify('Veuillez saisir un fonds de base valide.',true);return;}fondsBase=Math.round(value);try{localStorage.setItem(FONDS_KEY,String(fondsBase));renderDashboard();notify('Fonds de base enregistré.');}catch(e){notify('Impossible d’enregistrer le fonds de base dans ce navigateur.',true);}});
+
+function switchTab(id){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));if(id==='dashboard')renderDashboard();if(id==='historique')renderHistory()}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+function getForm(){let r={date:$('date').value,cashRestant:Number($('cashRestant').value||0),notes:$('notes').value.trim()};for(let [k] of SERVICES)for(let t of ['Debut','Fin','Comm'])r[k+t]=Number($(k+t).value||0);return r}
+function setForm(r){$('date').value=r.date;$('cashRestant').value=r.cashRestant??0;$('notes').value=r.notes||'';for(let [k] of SERVICES)for(let t of ['Debut','Fin','Comm'])$(k+t).value=r[k+t]??0}
+function resetForm(){editingDate=null;$('entryForm').reset();$('date').value=today();$('cashRestant').value=0;for(let [k] of SERVICES)for(let t of ['Debut','Fin','Comm'])$(k+t).value=0;$('formTitle').textContent='Saisie quotidienne';$('saveBtn').textContent='Enregistrer la journée';$('cancelEdit').style.display='none'}
+$('entryForm').addEventListener('submit',e=>{e.preventDefault();let r=getForm();if(!r.date){notify('Veuillez choisir une date.',true);return}if(!Number.isFinite(r.cashRestant)||r.cashRestant<0){notify('Veuillez saisir un montant d’espèces valide.',true);return}for(let [k] of SERVICES){for(let t of ['Debut','Fin','Comm'])if(r[k+t]<0||!Number.isFinite(r[k+t])){notify('Veuillez vérifier les montants.',true);return}}
+let idx=records.findIndex(x=>x.date===r.date);if(idx>=0&&editingDate!==r.date&&!confirm('Une saisie existe déjà pour cette date. La remplacer ?'))return;
+if(editingDate&&editingDate!==r.date)records=records.filter(x=>x.date!==editingDate);
+records=records.filter(x=>x.date!==r.date);records.push(r);records.sort((a,b)=>a.date.localeCompare(b.date));persist();resetForm();notify('Journée enregistrée avec succès.');switchTab('dashboard')});
+$('resetBtn').addEventListener('click',resetForm);$('cancelEdit').addEventListener('click',resetForm);
+function renderDashboard(){let now=today(),month=now.slice(0,7),todayRec=records.find(r=>r.date===now),monthly=records.filter(r=>r.date.startsWith(month));let latestForTotals=records.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]||{};let soldesOperateurs=SERVICES.reduce((s,[k])=>s+Number(latestForTotals[k+'Fin']||0),0);let cashRestant=Number(latestForTotals.cashRestant||0);$('totalFin').textContent=fmt(soldesOperateurs);$('cashFinTotal').textContent=fmt(cashRestant);$('totalInventaire').textContent=fmt(soldesOperateurs+cashRestant);$('commJour').textContent=fmt(todayRec?totalComm(todayRec):0);$('commMois').textContent=fmt(monthly.reduce((s,r)=>s+totalComm(r),0));$('commTotal').textContent=fmt(records.reduce((s,r)=>s+totalComm(r),0));$('fondsBaseTotal').textContent=fmt(fondsBase);$('totalActivite').textContent=fmt(fondsBase+records.reduce((s,r)=>s+totalComm(r),0));
+let latest=records.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];$('lastSummary').innerHTML=latest?`<b>${latest.date}</b> — Commissions totales : <b>${fmt(totalComm(latest))}</b>${latest.notes?'<br>Observation : '+escapeHtml(latest.notes):''}`:'Aucune saisie pour le moment.';
+let last=latest||{};$('dashboardServices').innerHTML=SERVICES.map(([k,n])=>`<tr><td>${n}</td><td>${fmt(last[k+'Debut']||0)}</td><td>${fmt(last[k+'Fin']||0)}</td><td>${fmt(monthly.reduce((s,r)=>s+Number(r[k+'Comm']||0),0))}</td></tr>`).join('')}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderHistory(){let from=$('fromDate').value,to=$('toDate').value,exact=$('searchDate').value;let arr=records.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to)&&(!exact||r.date===exact)).sort((a,b)=>b.date.localeCompare(a.date));$('historyBody').innerHTML=arr.map(r=>`<tr><td>${r.date}</td>${SERVICES.map(([k])=>`<td>${fmt(r[k+'Debut'])} / ${fmt(r[k+'Fin'])}</td><td>${fmt(r[k+'Comm'])}</td>`).join('')}<td>${fmt(r.cashRestant||0)}</td><td><b>${fmt(totalComm(r))}</b></td><td><button class="smallbtn" data-edit="${r.date}">Modifier</button><button class="smallbtn danger" data-delete="${r.date}">Supprimer</button></td></tr>`).join('');$('historyEmpty').style.display=arr.length?'none':'block';$('historyBody').querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{let r=records.find(x=>x.date===b.dataset.edit);if(r){editingDate=r.date;setForm(r);$('formTitle').textContent='Modifier la journée du '+r.date;$('saveBtn').textContent='Enregistrer les modifications';$('cancelEdit').style.display='inline-block';switchTab('saisie')}}));$('historyBody').querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Supprimer la saisie du '+b.dataset.delete+' ?')){records=records.filter(x=>x.date!==b.dataset.delete);persist();notify('Saisie supprimée.')}}))}
+function render(){renderDashboard();renderHistory()}
+$('searchBtn').addEventListener('click',renderHistory);$('clearSearch').addEventListener('click',()=>{$('fromDate').value='';$('toDate').value='';$('searchDate').value='';renderHistory()});
+$('exportBtn').addEventListener('click',()=>{download('sauvegarde_soldes_commissions_'+today()+'.json',JSON.stringify({app:'Gestion Soldes & Commissions Togo',version:1,exportedAt:new Date().toISOString(),fondsBase,records},null,2),'application/json');notify('Sauvegarde exportée.')});
+function download(name,data,type){let blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+$('csvBtn').addEventListener('click',()=>{let heads=['Date',...SERVICES.flatMap(([k,n])=>[n+' solde debut',n+' solde fin',n+' commission']),'Espèces restantes','Total commissions','Observations'];let lines=[heads,...records.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(r=>[r.date,...SERVICES.flatMap(([k])=>[r[k+'Debut'],r[k+'Fin'],r[k+'Comm']]),Number(r.cashRestant||0),totalComm(r),r.notes||''])];let csv='\ufeff'+lines.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');download('historique_commissions_'+today()+'.csv',csv,'text/csv;charset=utf-8');notify('Fichier CSV exporté.')});
+$('importBtn').addEventListener('click',async()=>{let file=$('importFile').files[0];if(!file){notify('Choisissez un fichier JSON.',true);return}try{let data=JSON.parse(await file.text()),arr=Array.isArray(data)?data:data.records;if(!Array.isArray(arr)||arr.some(r=>!r.date))throw new Error('Format invalide');if(!confirm('Cette importation remplacera toutes les saisies présentes. Continuer ?'))return;records=arr;records.sort((a,b)=>a.date.localeCompare(b.date));if(data&&typeof data==='object'&&!Array.isArray(data)&&Number.isFinite(Number(data.fondsBase))&&Number(data.fondsBase)>=0){fondsBase=Number(data.fondsBase);localStorage.setItem(FONDS_KEY,String(fondsBase));$('fondsBaseInput').value=fondsBase;}persist();$('importFile').value='';notify('Sauvegarde importée.')}catch(e){notify('Fichier invalide ou illisible. Aucune donnée importée.',true)}});
+$('deleteAllBtn').addEventListener('click',()=>{if(confirm('ATTENTION : effacer définitivement toutes les données de cet appareil ?')){if(confirm('Confirmez-vous une dernière fois ?')){records=[];fondsBase=0;localStorage.removeItem(FONDS_KEY);$('fondsBaseInput').value=0;persist();resetForm();notify('Toutes les données ont été effacées.')}}});
+load();loadFondsBase();$('date').value=today();render();
+</script>
+</body></html>
